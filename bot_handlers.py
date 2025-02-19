@@ -166,7 +166,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "- /addfolder <folder_name>\n"
         "- /removefolder <folder_number>\n"
         "- /add <folder_number>\n"
-        "- /remove <folder_number> <filename>\n\n"
+        "- /removefile <folder_number> <filename>\n\n"
         "📁 𝗔𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗙𝗼𝗹𝗱𝗲𝗿𝘀 (𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝘃𝗶𝗲𝘄 𝗳𝗶𝗹𝗲𝘀):",
         reply_markup=keyboard
     )
@@ -240,7 +240,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     # First check if it's a valid file message
     if not update.message.document and not update.message.photo and not update.message.video:
         await update.message.reply_text(
-            "🚫 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗶𝗹𝗲 𝗧𝘆𝗽𝗲\n"
+            "🚫 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗶𝗹𝗲 𝗧𝘆𝗽𝗘\n"
             "════════════════\n\n"
             "💡 Please send a valid file:\n"
             "📄 Documents (PDF)\n"
@@ -356,10 +356,10 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             storage.save_file(sanitized_folder, filename, downloaded_file)
 
             await update.message.reply_text(
-                f"✅ File saved successfully!\n"
-                f"📂 Folder: {sanitized_folder}\n"
+                "✅ File saved successfully!\n"
+                f"📂 Folder: {folder_name}\n"
                 f"📄 Filename: {filename}\n"
-                f"════════════════"
+                "════════════════"
             )
             logger.debug(f"File '{filename}' saved successfully to folder '{sanitized_folder}' by user: {user.username}")
 
@@ -391,37 +391,80 @@ async def get_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Get a file or list files in a folder."""
     if len(context.args) < 2:
         await update.message.reply_text(
-            "Please specify folder and filename: /get <folder_name> <filename/all>"
+            "📝 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗴𝗲𝘁 𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
+            "════════════════\n\n"
+            "💡 Use: /get <folder_number> <filename/all>\n"
+            "📌 Example: /get 3 document.pdf\n\n"
+            "🔍 Use /help to see folder numbers\n"
+            "════════════════"
         )
         return
 
-    folder_name = sanitize_folder_name(context.args[0])
-    if not folder_name:
-        await update.message.reply_text("Invalid folder name. Use only letters, numbers, hyphens and underscores.")
-        return
-
-    file_name = context.args[1]
-
     try:
+        # Get folder number and validate
+        folder_num = int(context.args[0]) - 1  # Convert to 0-based index
+        if folder_num < 0 or folder_num >= len(PREDEFINED_FOLDERS):
+            await update.message.reply_text(
+                "❌ 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
+                "════════════════\n\n"
+                "💡 Please use a number between 1 and 18\n"
+                "🔍 Use /help to see available folders\n"
+                "════════════════"
+            )
+            return
+
+        # Get folder name and sanitize it
+        folder_name = PREDEFINED_FOLDERS[folder_num]
+        sanitized_folder = sanitize_folder_name(folder_name)
+        file_name = " ".join(context.args[1:])  # Join all remaining arguments as filename
+
         if file_name.lower() == 'all':
             # List all files in the folder
-            files = storage.list_files(folder_name)
+            files = storage.list_files(sanitized_folder)
             if not files:
-                await update.message.reply_text(f"No files found in folder '{folder_name}'")
+                await update.message.reply_text(
+                    f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
+                    "No files found.\n\n"
+                    "════════════════"
+                )
                 return
 
-            files_list = "\n".join(files)
+            files_list = "\n".join([f"{i+1}. 📄 {file}" for i, file in enumerate(files)])
             await update.message.reply_text(
-                f"Files in folder '{folder_name}':\n{files_list}"
+                f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
+                f"{files_list}\n\n"
+                f"📊 Total Files: {len(files)}\n\n"
+                f"💡 𝗧𝗶𝗽: Use /get {folder_num + 1} <filename> to download a file\n"
+                f"════════════════"
             )
         else:
             # Get specific file
-            file_path = storage.get_file_path(folder_name, file_name)
-            with open(file_path, 'rb') as f:
-                await update.message.reply_document(document=f)
+            try:
+                file_path = storage.get_file_path(sanitized_folder, file_name)
+                with open(file_path, 'rb') as f:
+                    await update.message.reply_document(document=f)
+            except Exception as e:
+                logger.error(f"Error retrieving file: {str(e)}", exc_info=True)
+                await update.message.reply_text(
+                    f"❌ Error retrieving file: {str(e)}\n"
+                    f"🔄 Please try again or contact @CV_Owner for support\n"
+                    f"════════════════"
+                )
+
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Invalid folder number!\n"
+            "💡 Please provide a valid folder number\n"
+            "🔍 Use /help to see available folders\n"
+            "════════════════"
+        )
     except Exception as e:
-        logger.error(f"Error retrieving file: {str(e)}", exc_info=True)
-        await update.message.reply_text(f"Error retrieving file: {str(e)}")
+        logger.error(f"Error in get_file: {str(e)}", exc_info=True)
+        await update.message.reply_text(
+            f"❌ Error processing request: {str(e)}\n"
+            f"🔄 Please try again or contact @CV_Owner for support\n"
+            f"════════════════"
+        )
 
 async def remove_folder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove a folder and its contents."""
@@ -460,59 +503,69 @@ async def remove_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "❌ Please specify folder number and filename:\n"
-            "💡 Example: /removefile 1 example.pdf\n"
+            "📝 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗿𝗲𝗺𝗼𝘃𝗲𝗳𝗶𝗹𝗲 𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
+            "════════════════\n\n"
+            "💡 Use: /removefile <folder_number> <filename>\n"
+            "📌 Example: /removefile 3 document.pdf\n\n"
             "🔍 Use /help to see folder numbers\n"
             "════════════════"
         )
         return
 
     try:
-        keyboard = await get_folder_keyboard()
+        # Get folder number and validate
         folder_num = int(context.args[0]) - 1  # Convert to 0-based index
-        if folder_num < 0 or folder_num >= len(keyboard.inline_keyboard):
+        if folder_num < 0 or folder_num >= len(PREDEFINED_FOLDERS):
             await update.message.reply_text(
-                "❌ Invalid folder number!\n"
+                "❌ 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
+                "════════════════\n\n"
                 "💡 Please use a number between 1 and 18\n"
-                "🔍 Use /help to see all available folders\n"
+                "🔍 Use /help to see available folders\n"
                 "════════════════"
             )
             return
 
-        # Get folder name from the keyboard buttons
-        folder_name = keyboard.inline_keyboard[folder_num][0].callback_data[7:]
-        folder_name = sanitize_folder_name(folder_name)
-        file_name = context.args[1]
+        # Get folder name and sanitize it
+        folder_name = PREDEFINED_FOLDERS[folder_num]
+        sanitized_folder = sanitize_folder_name(folder_name)
+        file_name = " ".join(context.args[1:])  # Join all remaining arguments as filename
 
         try:
-            storage.delete_file(folder_name, file_name)
-            logger.debug(f"File '{file_name}' deleted successfully from folder '{folder_name}' by user: {user.username}")
+            storage.delete_file(sanitized_folder, file_name)
+
+            # Get updated file list for summary
+            files = storage.list_files(sanitized_folder)
+            files_list = "\n".join([f"{i+1}. 📄 {file}" for i, file in enumerate(files)])
+
             await update.message.reply_text(
-                f"✅ File deleted successfully!\n"
-                f"📂 Folder: {folder_name}\n"
-                f"📄 Filename: {file_name}\n"
+                f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
+                f"{files_list}\n\n"
+                f"📊 Total Files: {len(files)}\n\n"
+                f"💡 𝗧𝗶𝗽: Use /get {folder_num + 1} <filename> to download a file\n"
                 f"════════════════"
             )
+            logger.debug(f"File '{file_name}' deleted successfully from folder '{sanitized_folder}' by user: {user.username}")
+
         except Exception as e:
             logger.error(f"Error deleting file: {str(e)}", exc_info=True)
             await update.message.reply_text(
                 f"❌ Error deleting file: {str(e)}\n"
-                f"🔄 Please try again or contact support\n"
+                f"🔄 Please try again or contact @CV_Owner for support\n"
                 f"════════════════"
             )
 
     except ValueError:
         await update.message.reply_text(
             "❌ Invalid folder number!\n"
-            "💡 Please use a number between 1 and 18\n"
-            "🔍 Use /help to see all available folders\n"
+            "💡 Please provide a valid folder number\n"
+            "🔍 Use /help to see available folders\n"
             "════════════════"
         )
     except Exception as e:
         logger.error(f"Error in remove_file: {str(e)}", exc_info=True)
         await update.message.reply_text(
             f"❌ Error processing request: {str(e)}\n"
-            f"🔄 Please try again or contact support\n"
+            f"🔄 Please try again or contact @CV_Owner for support\n"
             f"════════════════"
         )
 
@@ -599,15 +652,15 @@ async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT
             custom_filename = " ".join(context.args[1:])
             if not any(custom_filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS):
                 custom_filename += file_extension
-        elif file_extension == '.pdf' and original_filename:
-            # For PDFs, use original name if no custom name provided
+        elif original_filename:
+            # For any file with original name, use it if no custom name provided
             custom_filename = original_filename
         else:
-            # For other files, require a custom name
+            # For files without original names (photos/videos), require a custom name
             await update.message.reply_text(
                 "❌ 𝗠𝗶𝘀𝘀𝗶𝗻𝗴 𝗙𝗶𝗹𝗲𝗻𝗮𝗺𝗲\n"
                 "════════════════\n\n"
-                "💡 Non-PDF files require a custom filename\n"
+                "💡 Files without names require a custom filename\n"
                 "🔍 Example: /add 3 my_image.jpg\n"
                 "════════════════"
             )

@@ -32,8 +32,8 @@ def main():
     application.add_handler(CommandHandler("get", get_file))
     application.add_handler(CommandHandler("addfolder", create_folder))
     application.add_handler(CommandHandler("removefolder", remove_folder))
-    application.add_handler(CommandHandler("removefile", remove_file))
     application.add_handler(CommandHandler("add", handle_command_with_file))
+    application.add_handler(CommandHandler("removefile", remove_file))
 
     # Add callback query handler for inline buttons
     application.add_handler(CallbackQueryHandler(button_callback))
