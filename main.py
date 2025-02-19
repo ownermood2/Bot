@@ -34,8 +34,8 @@ def main():
     application.add_handler(CommandHandler("removefolder", remove_folder))
     application.add_handler(CommandHandler("removefile", remove_file))
 
-    # Add handler for addpdf command that provides instructions
-    application.add_handler(CommandHandler("addpdf", lambda update, context: handle_command_with_file(update, context, "addpdf")))
+    # Add handler for add command that provides instructions
+    application.add_handler(CommandHandler("add", lambda update, context: handle_command_with_file(update, context, "add")))
 
     # Add callback query handler for inline buttons
     application.add_handler(CallbackQueryHandler(button_callback))

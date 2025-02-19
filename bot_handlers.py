@@ -67,7 +67,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 async def get_folder_keyboard():
-    """Create an inline keyboard with folder buttons."""
+    """Create an inline keyboard with folder buttons in a two-column grid."""
     folders = [
         "GK-CA (1-Y) STATIC",
         "GMB New (2025)",
@@ -93,11 +93,13 @@ async def get_folder_keyboard():
     row = []
     for i, folder in enumerate(folders):
         # Add number, folder emoji and arrow for better visibility
-        button_text = f"🔸 {i+1} 📁 {folder}"  # Changed format to make number more visible
+        button_text = f"{i+1}. 📁 {folder} →"
         row.append(InlineKeyboardButton(button_text, callback_data=f"folder_{folder}"))
 
-        # Create rows with 1 button each for better readability
-        keyboard.append([row.pop()])
+        # Create rows with 2 buttons each
+        if len(row) == 2 or i == len(folders) - 1:
+            keyboard.append(row)
+            row = []
 
     return InlineKeyboardMarkup(keyboard)
 
@@ -117,6 +119,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "🛠 𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀:\n"
         "- /addfolder <folder_name>\n"
         "- /removefolder <folder_number>\n"
+        "- /add <folder_number>\n"
         "- /removefile <folder_number> <filename>\n\n"
         "📁 𝗔𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗙𝗼𝗹𝗱𝗲𝗿𝘀 (𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝘃𝗶𝗲𝘄 𝗳𝗶𝗹𝗲𝘀):",
         reply_markup=keyboard
@@ -187,8 +190,12 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if not update.message.document and not update.message.photo and not update.message.video:
         await update.message.reply_text(
-            "🚫 Please send a valid file (document, photo, or video)\n"
-            "💡 Supported types: PDF, Images (JPG, PNG), Videos (MP4, AVI)\n"
+            "🚫 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗶𝗹𝗲 𝗧𝘆𝗽𝗲\n"
+            "════════════════\n\n"
+            "💡 Please send a valid file:\n"
+            "📄 Documents (PDF)\n"
+            "🖼️ Images (JPG, PNG)\n"
+            "🎥 Videos (MP4, AVI)\n"
             "════════════════"
         )
         return
@@ -196,9 +203,11 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     # Check for folder number in caption
     if not update.message.caption:
         await update.message.reply_text(
-            "📝 Please add a folder number in the caption\n"
-            "Example: Send your file with '1' as caption to save in first folder\n"
-            "💡 Use /help to see all folder numbers\n"
+            "📝 𝗠𝗶𝘀𝘀𝗶𝗻𝗴 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
+            "════════════════\n\n"
+            "💡 Please add a folder number in caption\n"
+            "Example: Send file with '1' as caption\n\n"
+            "🔍 Use /help to see folder numbers\n"
             "════════════════"
         )
         return
@@ -209,9 +218,10 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         folder_num = int(update.message.caption.strip()) - 1  # Convert to 0-based index
         if folder_num < 0 or folder_num >= len(keyboard.inline_keyboard):
             await update.message.reply_text(
-                "❌ Invalid folder number!\n"
+                "❌ 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
+                "════════════════\n\n"
                 "💡 Please use a number between 1 and 18\n"
-                "🔍 Use /help to see all available folders\n"
+                "🔍 Use /help to see available folders\n"
                 "════════════════"
             )
             return
@@ -438,20 +448,21 @@ async def remove_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT_TYPE, command_name: str) -> None:
     """Handle commands that expect a file attachment."""
     await update.message.reply_text(
-        f"📤 𝗛𝗼𝘄 𝘁𝗼 𝘂𝗽𝗹𝗼𝗮𝗱 𝗮 𝗳𝗶𝗹𝗲:\n"
-        f"════════════════\n"
-        f"1️⃣ 𝗗𝗢𝗡'𝗧 use /{command_name} as a command\n"
-        f"2️⃣ Instead, follow these steps:\n\n"
-        f"   📎 Select your file first\n"
-        f"   🔢 Add ONLY the folder number in caption\n"
-        f"   ➡️ Then send the message\n\n"
-        f"💡 𝗘𝘅𝗮𝗺𝗽𝗹𝗲:\n"
-        f"1. Click 📎 (attachment)\n"
-        f"2. Select your PDF/photo/video\n"
-        f"3. Type just '3' in caption to save in folder 3\n"
-        f"4. Send the message\n\n"
-        f"🔍 Use /help to see all folder numbers\n"
-        f"════════════════"
+        "📤 𝗛𝗼𝘄 𝘁𝗼 𝘂𝗽𝗹𝗼𝗮𝗱 𝗮 𝗳𝗶𝗹𝗲:\n"
+        "════════════════\n\n"
+        "1️⃣ 𝗦𝗲𝗹𝗲𝗰𝘁 𝘆𝗼𝘂𝗿 𝗳𝗶𝗹𝗲:\n"
+        "   • Click 📎 (attachment)\n"
+        "   • Choose your PDF/photo/video\n\n"
+        "2️⃣ 𝗔𝗱𝗱 𝗳𝗼𝗹𝗱𝗲𝗿 𝗻𝘂𝗺𝗯𝗲𝗿:\n"
+        "   • Type ONLY the number (e.g., '3')\n"
+        "   • Add it in the caption field\n\n"
+        "3️⃣ 𝗦𝗲𝗻𝗱 𝘁𝗵𝗲 𝗺𝗲𝘀𝘀𝗮𝗴𝗲\n\n"
+        "💡 𝗘𝘅𝗮𝗺𝗽𝗹𝗲:\n"
+        "• Select your file\n"
+        "• Type '3' in caption to save in folder 3\n"
+        "• Send\n\n"
+        "🔍 Use /help to see all folder numbers\n"
+        "════════════════"
     )
 
 
