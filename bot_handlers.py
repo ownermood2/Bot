@@ -3,10 +3,24 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from storage_manager import StorageManager
-from config import ALLOWED_EXTENSIONS, MAX_FILE_SIZE
+from config import ALLOWED_EXTENSIONS, MAX_FILE_SIZE, STORAGE_PATH
 
 logger = logging.getLogger(__name__)
-storage = StorageManager()
+
+def sanitize_folder_name(folder_name: str) -> str:
+    """Sanitize folder name to prevent path traversal."""
+    # Remove any path separators and spaces, preserve more characters
+    sanitized = "".join(c for c in folder_name if c.isalnum() or c in "-_@()")
+    logger.debug(f"Sanitizing folder name: '{folder_name}' -> '{sanitized}'")
+    return sanitized
+
+# Initialize storage with the configured path
+logger.info(f"Initializing StorageManager with path: {STORAGE_PATH}")
+if not os.path.exists(STORAGE_PATH):
+    os.makedirs(STORAGE_PATH, exist_ok=True)
+    logger.info(f"Created storage base path: {STORAGE_PATH}")
+
+storage = StorageManager(STORAGE_PATH)
 
 # Initialize storage and predefined folders
 PREDEFINED_FOLDERS = [
@@ -32,17 +46,37 @@ PREDEFINED_FOLDERS = [
 
 def initialize_folders():
     """Initialize all predefined folders."""
+    logger.info(f"Initializing predefined folders in {storage.base_path}")
+
+    # Verify base path exists
+    if not os.path.exists(storage.base_path):
+        os.makedirs(storage.base_path, exist_ok=True)
+        logger.info(f"Created base storage directory: {storage.base_path}")
+
+    # Create all predefined folders
     for folder in PREDEFINED_FOLDERS:
         try:
             sanitized_folder = sanitize_folder_name(folder)
-            if not os.path.exists(os.path.join(storage.base_path, sanitized_folder)):
-                storage.create_folder(sanitized_folder)
-                logger.debug(f"Created folder: {sanitized_folder}")
-        except Exception as e:
-            logger.error(f"Error creating folder {folder}: {str(e)}")
+            folder_path = os.path.join(storage.base_path, sanitized_folder)
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path, exist_ok=True)
+                logger.info(f"Created folder: {folder_path}")
+            else:
+                logger.info(f"Folder already exists: {folder_path}")
 
-# Initialize folders when module loads
+            # Debug: List contents to verify
+            if os.path.exists(folder_path):
+                logger.debug(f"Verified folder exists at: {folder_path}")
+                logger.debug(f"Folder contents: {os.listdir(folder_path)}")
+        except Exception as e:
+            logger.error(f"Error creating folder {folder}: {str(e)}", exc_info=True)
+            raise
+
+# Add debug logging after initialization
+logger.info("Starting folder initialization...")
 initialize_folders()
+logger.info("Folder initialization complete")
+logger.debug(f"All folders in storage: {os.listdir(STORAGE_PATH)}")
 
 # Developer usernames both with and without @ symbol
 DEVELOPER_USERNAMES = ['CV_Owner', '@CV_Owner', 'Ace_Clat', '@Ace_Clat']
@@ -75,11 +109,6 @@ async def unauthorized_message(update: Update) -> None:
         "✅ Thank you for your cooperation!\n"
         "════════════════"
     )
-
-def sanitize_folder_name(folder_name: str) -> str:
-    """Sanitize folder name to prevent path traversal."""
-    # Remove any path separators and spaces
-    return "".join(c for c in folder_name if c.isalnum() or c in "-_")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
@@ -233,6 +262,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     try:
         # Get folder number and validate
         folder_num = int(update.message.caption.strip()) - 1  # Convert to 0-based index
+        logger.debug(f"Received folder number: {folder_num + 1} (index: {folder_num})")
 
         if folder_num < 0 or folder_num >= len(PREDEFINED_FOLDERS):
             await update.message.reply_text(
@@ -247,19 +277,37 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         # Get folder name and sanitize it
         folder_name = PREDEFINED_FOLDERS[folder_num]
         sanitized_folder = sanitize_folder_name(folder_name)
-        logger.debug(f"Using sanitized folder name: {sanitized_folder}")
+        logger.debug(f"Using folder name: {folder_name}")
+        logger.debug(f"Sanitized to: {sanitized_folder}")
 
+        # Debug: Check if folder exists and create if needed
+        folder_path = os.path.join(storage.base_path, sanitized_folder)
+        logger.debug(f"Full folder path: {folder_path}")
+        if not os.path.exists(folder_path):
+            logger.info(f"Creating missing folder: {folder_path}")
+            os.makedirs(folder_path, exist_ok=True)
+
+        # Verify folder was created
+        if os.path.exists(folder_path):
+            logger.debug(f"Verified folder exists at: {folder_path}")
+            logger.debug(f"Folder contents: {os.listdir(folder_path)}")
+        else:
+            logger.error(f"Failed to create/verify folder: {folder_path}")
+            raise Exception("Failed to create folder")
 
         # Get the file
         if update.message.document:
             file = update.message.document
             file_extension = os.path.splitext(file.file_name)[1].lower()
+            logger.debug(f"Processing document with extension: {file_extension}")
         elif update.message.photo:
             file = update.message.photo[-1]  # Get the highest quality photo
             file_extension = '.jpg'
+            logger.debug("Processing photo (jpg)")
         else:  # video
             file = update.message.video
             file_extension = '.mp4'
+            logger.debug("Processing video (mp4)")
 
         # Validate file size
         if hasattr(file, 'file_size') and file.file_size > MAX_FILE_SIZE:
@@ -286,18 +334,22 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         # Download and save file
         try:
+            logger.debug(f"Getting file from Telegram with ID: {file.file_id}")
             file_obj = await context.bot.get_file(file.file_id)
             if not file_obj:
                 raise ValueError("Could not get file from Telegram")
 
+            logger.debug("Downloading file content")
             downloaded_file = await file_obj.download_as_bytearray()
             if not downloaded_file:
                 raise ValueError("Could not download file content")
 
             # Generate a unique filename using the file ID
             filename = f"{file.file_id}{file_extension}"
+            logger.debug(f"Generated filename: {filename}")
 
             # Save file using storage manager
+            logger.debug(f"Saving file to folder: {sanitized_folder}")
             storage.save_file(sanitized_folder, filename, downloaded_file)
 
             await update.message.reply_text(

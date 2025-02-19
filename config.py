@@ -4,7 +4,7 @@ import os
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 
 # Storage configuration
-STORAGE_PATH = "storage"
+STORAGE_PATH = os.path.abspath("storage")  # Use absolute path
 
 # Allowed file types
 ALLOWED_EXTENSIONS = {
