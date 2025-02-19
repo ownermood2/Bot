@@ -57,13 +57,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "🚀 𝗪𝗵𝘆 𝗖𝗟𝗔𝗧 𝗖𝗹𝗼𝘂𝗱 𝗕𝗼𝘁?\n"
         "✅ 𝟮𝟰/𝟳 𝗔𝗰𝗰𝗲𝘀𝘀 | ✅ 𝗟𝗶𝗴𝗵𝘁𝗻𝗶𝗻𝗴-𝗙𝗮𝘀𝘁 𝗦𝗲𝗮𝗿𝗰𝗵\n"
         "✅ 𝗪𝗲𝗹𝗹-𝗢𝗿𝗴𝗮𝗻𝗶𝘇𝗲𝗱 | ✅ 𝗨𝘀𝗲𝗿-𝗙𝗿𝗶𝗲𝗻𝗱𝗹𝘆\n\n"
-        "💡 𝗧𝗶𝗽: 𝗨𝘀𝗲 /[get folder name] [file name/all] to fetch related materials instantly!\n\n"
+        "💡 𝗧𝗶𝗽: 𝗛𝗼𝘄 𝘁𝗼 𝗨𝘀𝗲\n"
+        "1. Send files with a folder number in caption (e.g., '1' for first folder)\n"
+        "2. Use /help to see all folders with their numbers\n"
+        "3. Quick commands: /get 1 filename to download from folder 1\n\n"
         "📌 Join All ➤ <a href='https://t.me/addlist/PyjyuGNvTnplMWZl'>𝗙𝗼𝗹𝗱𝗲𝗿 IIı 𝗖𝗩 ıII</a>\n"
         "🔹 Powered by: @CLAT_Vision | @Quiz_CV | @Conference_CV\n\n"
         "💡𝗙𝗼𝗿 𝗺𝗼𝗿𝗲 𝗶𝗻𝗳𝗼𝗿𝗺𝗮𝘁𝗶𝗼𝗻, 𝘁𝘆𝗽𝗲 /help"
     )
 
-def get_folder_keyboard():
+async def get_folder_keyboard():
     """Create an inline keyboard with folder buttons."""
     folders = [
         "GK-CA (1-Y) STATIC",
@@ -90,31 +93,33 @@ def get_folder_keyboard():
     row = []
     for i, folder in enumerate(folders):
         # Add number, folder emoji and arrow for better visibility
-        button_text = f"{i+1}. 📁 {folder} →"
+        button_text = f"🔸 {i+1} 📁 {folder}"  # Changed format to make number more visible
         row.append(InlineKeyboardButton(button_text, callback_data=f"folder_{folder}"))
 
-        # Create rows with 2 buttons each for better layout
-        if len(row) == 2 or i == len(folders) - 1:
-            keyboard.append(row)
-            row = []
+        # Create rows with 1 button each for better readability
+        keyboard.append([row.pop()])
 
     return InlineKeyboardMarkup(keyboard)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
+    keyboard = await get_folder_keyboard()
     await update.message.reply_text(
-        "📂 𝗙𝗶𝗹𝗲 𝗠𝗮𝗻𝗮𝗴𝗲𝗺𝗲𝗻𝘁 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀\n\n"
-        "✅ 𝗚𝗲𝘁 𝗙𝗶𝗹𝗲𝘀\n"
-        "- /get <folder_number> <filename> – Fetch a specific file\n"
-        "- /get <folder_number> all – List all files in a folder\n\n"
-        "🛠 𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿 𝗖𝗼𝗺𝗺𝗻𝗱𝘀\n"
-        "- /addfolder <folder_name> – Create a folder\n"
-        "- /removefolder <folder_number> – Delete a folder\n"
-        "- /addpdf <folder_number> – Upload a PDF (Send file with command)\n"
-        "- /removepdf <folder_number> <filename> – Delete a PDF\n\n"
-        "💡 𝗧𝗶𝗽: Use folder numbers for quick access (e.g., /addpdf 1 for first folder)\n\n"
-        "📁 Available Folders (Click to select):",
-        reply_markup=get_folder_keyboard()
+        "📂 𝗙𝗶𝗹𝗲 𝗠𝗮𝗻𝗮𝗴𝗲𝗺𝗲𝗻𝘁 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀\n"
+        "════════════════\n\n"
+        "📤 𝗧𝗼 𝘂𝗽𝗹𝗼𝗮𝗱 𝗳𝗶𝗹𝗲𝘀:\n"
+        "1. Select your file (📎)\n"
+        "2. Add folder number in caption (e.g., '3')\n"
+        "3. Send the message\n\n"
+        "📥 𝗧𝗼 𝗱𝗼𝘄𝗻𝗹𝗼𝗮𝗱 𝗳𝗶𝗹𝗲𝘀:\n"
+        "- /get <folder_number> <filename>\n"
+        "- /get <folder_number> all – List files\n\n"
+        "🛠 𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀:\n"
+        "- /addfolder <folder_name>\n"
+        "- /removefolder <folder_number>\n"
+        "- /removefile <folder_number> <filename>\n\n"
+        "📁 𝗔𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗙𝗼𝗹𝗱𝗲𝗿𝘀 (𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝘃𝗶𝗲𝘄 𝗳𝗶𝗹𝗲𝘀):",
+        reply_markup=keyboard
     )
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -177,65 +182,129 @@ async def create_folder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle incoming files."""
-    if not update.message.caption:
+    user = update.effective_user
+    logger.debug(f"File upload attempt by user: {user.username}")
+
+    if not update.message.document and not update.message.photo and not update.message.video:
         await update.message.reply_text(
-            "Please provide a folder name in the caption when sending files."
+            "🚫 Please send a valid file (document, photo, or video)\n"
+            "💡 Supported types: PDF, Images (JPG, PNG), Videos (MP4, AVI)\n"
+            "════════════════"
         )
         return
 
-    folder_name = sanitize_folder_name(update.message.caption.strip())
-    if not folder_name:
-        await update.message.reply_text("Invalid folder name. Use only letters, numbers, hyphens and underscores.")
+    # Check for folder number in caption
+    if not update.message.caption:
+        await update.message.reply_text(
+            "📝 Please add a folder number in the caption\n"
+            "Example: Send your file with '1' as caption to save in first folder\n"
+            "💡 Use /help to see all folder numbers\n"
+            "════════════════"
+        )
         return
 
     try:
+        # Get folder number from caption
+        keyboard = await get_folder_keyboard()
+        folder_num = int(update.message.caption.strip()) - 1  # Convert to 0-based index
+        if folder_num < 0 or folder_num >= len(keyboard.inline_keyboard):
+            await update.message.reply_text(
+                "❌ Invalid folder number!\n"
+                "💡 Please use a number between 1 and 18\n"
+                "🔍 Use /help to see all available folders\n"
+                "════════════════"
+            )
+            return
+
+        # Get folder name from the keyboard buttons
+        folder_name = keyboard.inline_keyboard[folder_num][0].callback_data[7:]
+        folder_name = sanitize_folder_name(folder_name)
+
         # Get the file from the message
         if update.message.document:
             file = update.message.document
+            file_extension = os.path.splitext(file.file_name)[1].lower()
         elif update.message.photo:
             file = update.message.photo[-1]  # Get the highest quality photo
+            file_extension = '.jpg'
         elif update.message.video:
             file = update.message.video
+            file_extension = '.mp4'
         else:
-            await update.message.reply_text("Unsupported file type!")
+            await update.message.reply_text(
+                "❌ Unsupported file type!\n"
+                "💡 Please send a document, photo, or video\n"
+                "════════════════"
+            )
             return
 
         # Check file size
         if hasattr(file, 'file_size') and file.file_size > MAX_FILE_SIZE:
+            size_mb = MAX_FILE_SIZE / (1024*1024)
             await update.message.reply_text(
-                f"File too large! Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
+                f"❌ File too large!\n"
+                f"💡 Maximum size allowed: {size_mb:.1f}MB\n"
+                f"📏 Your file: {file.file_size / (1024*1024):.1f}MB\n"
+                f"════════════════"
             )
             return
 
         # Check file extension
-        file_extension = ''
-        if hasattr(file, 'file_name'):
-            file_extension = os.path.splitext(file.file_name)[1].lower()
-        elif update.message.photo:
-            file_extension = '.jpg'
-        elif update.message.video:
-            file_extension = '.mp4'
-
         if file_extension not in ALLOWED_EXTENSIONS:
             await update.message.reply_text(
-                f"Unsupported file type! Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+                f"❌ Unsupported file type: {file_extension}\n"
+                f"💡 Allowed types:\n"
+                f"📄 Documents: {', '.join(ext for ext in ALLOWED_EXTENSIONS if ext.startswith('.p'))}\n"
+                f"🖼️ Images: {', '.join(ext for ext in ALLOWED_EXTENSIONS if ext.startswith('.j') or ext.startswith('.png'))}\n"
+                f"🎥 Videos: {', '.join(ext for ext in ALLOWED_EXTENSIONS if ext.startswith('.m') or ext.startswith('.avi'))}\n"
+                f"════════════════"
             )
             return
 
         # Download and save the file
-        file_obj = await context.bot.get_file(file.file_id)
-        downloaded_file = await file_obj.download_as_bytearray()
+        try:
+            file_obj = await context.bot.get_file(file.file_id)
+            if not file_obj:
+                raise ValueError("Could not get file from Telegram")
 
-        # Save the file using storage manager
-        filename = f"{file.file_id}{file_extension}"
-        storage.save_file(folder_name, filename, downloaded_file)
+            downloaded_file = await file_obj.download_as_bytearray()
+            if not downloaded_file:
+                raise ValueError("Could not download file content")
 
+            # Save the file using storage manager
+            filename = f"{file.file_id}{file_extension}"
+            storage.save_file(folder_name, filename, downloaded_file)
+
+            await update.message.reply_text(
+                f"✅ File saved successfully!\n"
+                f"📂 Folder: {folder_name}\n"
+                f"📄 Filename: {filename}\n"
+                f"════════════════"
+            )
+            logger.debug(f"File '{filename}' saved successfully to folder '{folder_name}' by user: {user.username}")
+        except Exception as e:
+            logger.error(f"Error downloading/saving file: {str(e)}", exc_info=True)
+            await update.message.reply_text(
+                f"❌ Error saving file: {str(e)}\n"
+                f"🔄 Please try again or contact @CV_Owner for support\n"
+                f"════════════════"
+            )
+
+    except ValueError as e:
+        logger.error(f"Invalid folder number: {str(e)}", exc_info=True)
         await update.message.reply_text(
-            f"File saved successfully in folder '{folder_name}' as '{filename}'"
+            "❌ Invalid folder number!\n"
+            "💡 Please provide a valid folder number in the caption\n"
+            "🔍 Use /help to see the list of folders with their numbers\n"
+            "════════════════"
         )
     except Exception as e:
         logger.error(f"Error handling file: {str(e)}", exc_info=True)
-        await update.message.reply_text(f"Error saving file: {str(e)}")
+        await update.message.reply_text(
+            f"❌ Error processing file: {str(e)}\n"
+            f"🔄 Please try again or contact @CV_Owner for support\n"
+            f"════════════════"
+        )
 
 async def get_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Get a file or list files in a folder."""
@@ -310,23 +379,80 @@ async def remove_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "Please specify folder and filename: /removepdf <folder_name> <filename>"
+            "❌ Please specify folder number and filename:\n"
+            "💡 Example: /removefile 1 example.pdf\n"
+            "🔍 Use /help to see folder numbers\n"
+            "════════════════"
         )
         return
 
-    folder_name = sanitize_folder_name(context.args[0])
-    if not folder_name:
-        await update.message.reply_text("Invalid folder name. Use only letters, numbers, hyphens and underscores.")
-        return
-
-    file_name = context.args[1]
     try:
-        storage.delete_file(folder_name, file_name)
-        logger.debug(f"File '{file_name}' deleted successfully from folder '{folder_name}' by user: {user.username}")
-        await update.message.reply_text(f"File '{file_name}' deleted successfully from folder '{folder_name}'!")
+        keyboard = await get_folder_keyboard()
+        folder_num = int(context.args[0]) - 1  # Convert to 0-based index
+        if folder_num < 0 or folder_num >= len(keyboard.inline_keyboard):
+            await update.message.reply_text(
+                "❌ Invalid folder number!\n"
+                "💡 Please use a number between 1 and 18\n"
+                "🔍 Use /help to see all available folders\n"
+                "════════════════"
+            )
+            return
+
+        # Get folder name from the keyboard buttons
+        folder_name = keyboard.inline_keyboard[folder_num][0].callback_data[7:]
+        folder_name = sanitize_folder_name(folder_name)
+        file_name = context.args[1]
+
+        try:
+            storage.delete_file(folder_name, file_name)
+            logger.debug(f"File '{file_name}' deleted successfully from folder '{folder_name}' by user: {user.username}")
+            await update.message.reply_text(
+                f"✅ File deleted successfully!\n"
+                f"📂 Folder: {folder_name}\n"
+                f"📄 Filename: {file_name}\n"
+                f"════════════════"
+            )
+        except Exception as e:
+            logger.error(f"Error deleting file: {str(e)}", exc_info=True)
+            await update.message.reply_text(
+                f"❌ Error deleting file: {str(e)}\n"
+                f"🔄 Please try again or contact support\n"
+                f"════════════════"
+            )
+
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Invalid folder number!\n"
+            "💡 Please use a number between 1 and 18\n"
+            "🔍 Use /help to see all available folders\n"
+            "════════════════"
+        )
     except Exception as e:
-        logger.error(f"Error deleting file: {str(e)}", exc_info=True)
-        await update.message.reply_text(f"Error deleting file: {str(e)}")
+        logger.error(f"Error in remove_file: {str(e)}", exc_info=True)
+        await update.message.reply_text(
+            f"❌ Error processing request: {str(e)}\n"
+            f"🔄 Please try again or contact support\n"
+            f"════════════════"
+        )
+
+async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT_TYPE, command_name: str) -> None:
+    """Handle commands that expect a file attachment."""
+    await update.message.reply_text(
+        f"📤 𝗛𝗼𝘄 𝘁𝗼 𝘂𝗽𝗹𝗼𝗮𝗱 𝗮 𝗳𝗶𝗹𝗲:\n"
+        f"════════════════\n"
+        f"1️⃣ 𝗗𝗢𝗡'𝗧 use /{command_name} as a command\n"
+        f"2️⃣ Instead, follow these steps:\n\n"
+        f"   📎 Select your file first\n"
+        f"   🔢 Add ONLY the folder number in caption\n"
+        f"   ➡️ Then send the message\n\n"
+        f"💡 𝗘𝘅𝗮𝗺𝗽𝗹𝗲:\n"
+        f"1. Click 📎 (attachment)\n"
+        f"2. Select your PDF/photo/video\n"
+        f"3. Type just '3' in caption to save in folder 3\n"
+        f"4. Send the message\n\n"
+        f"🔍 Use /help to see all folder numbers\n"
+        f"════════════════"
+    )
 
 
 async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

@@ -4,7 +4,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 from bot_handlers import (
     start, help_command, handle_file, get_file, create_folder,
     remove_folder, remove_file, handle_unknown_command, handle_error,
-    button_callback
+    button_callback, handle_command_with_file
 )
 
 # Enable logging
@@ -32,7 +32,10 @@ def main():
     application.add_handler(CommandHandler("get", get_file))
     application.add_handler(CommandHandler("addfolder", create_folder))
     application.add_handler(CommandHandler("removefolder", remove_folder))
-    application.add_handler(CommandHandler("removepdf", remove_file))
+    application.add_handler(CommandHandler("removefile", remove_file))
+
+    # Add handler for addpdf command that provides instructions
+    application.add_handler(CommandHandler("addpdf", lambda update, context: handle_command_with_file(update, context, "addpdf")))
 
     # Add callback query handler for inline buttons
     application.add_handler(CallbackQueryHandler(button_callback))
