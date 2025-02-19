@@ -421,6 +421,53 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.message.edit_reply_markup(reply_markup=None)
             return
 
+        if query.data.startswith("folder_"):
+            # Extract folder name from callback data
+            folder_name = query.data[7:]  # Remove 'folder_' prefix
+            try:
+                # Get the original folder name (before sanitization)
+                original_folder_name = next(
+                    (name for name in PREDEFINED_FOLDERS
+                     if sanitize_folder_name(name) == folder_name),
+                    folder_name
+                )
+
+                files = storage.list_files(folder_name)
+                if not files:
+                    await query.message.edit_text(
+                        f"📂 𝗙𝗼𝗹𝗱𝗲𝗿 '{original_folder_name}' 𝗶𝘀 𝗲𝗺𝗽𝘁𝘆\n\n"
+                        "💡 𝗧𝗶𝗽: You can upload files to this folder by sending them with the folder number in caption\n"
+                        "════════════════"
+                    )
+                    return
+
+                # Create a numbered list of files with emoji
+                files_list = "\n".join([f"{i+1}. 📄 {file}" for i, file in enumerate(files)])
+                # Get folder number for the tip
+                folder_num = PREDEFINED_FOLDERS.index(original_folder_name) + 1
+
+                keyboard = [[InlineKeyboardButton("🔄 Back", callback_data="back")]]
+
+                await query.message.edit_text(
+                    f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{original_folder_name}':\n\n"
+                    f"{files_list}\n\n"
+                    f"📊 Total Files: {len(files)}\n\n"
+                    f"💡 𝗧𝗶𝗽: Use /get {folder_num} <filename> to download a file\n"
+                    f"════════════════",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+
+            except Exception as e:
+                logger.error(f"Error accessing folder '{folder_name}': {str(e)}", exc_info=True)
+                await query.message.edit_text(
+                    "❌ 𝗘𝗿𝗿𝗼𝗿 𝗔𝗰𝗰𝗲𝘀𝘀𝗶𝗻𝗴 𝗙𝗼𝗹𝗱𝗲𝗿\n"
+                    "════════════════\n\n"
+                    f"💡 Error: {str(e)}\n"
+                    "🔄 Please try again or contact @CV_Owner\n"
+                    "════════════════"
+                )
+            return
+
         if query.data.startswith("more_"):
             # Handle pagination
             parts = query.data.split('_')
@@ -622,26 +669,30 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             if not file_obj:
                 raise ValueError("Could not get file from Telegram")
 
-            logger.debug("Downloading file content")
-            downloaded_file = await file_obj.download_as_bytearray()
-            if not downloaded_file:
-                raise ValueError("Could not download file content")
-
             # Generate a unique filename using the file ID
             filename = f"{file.file_id}{file_extension}"
             logger.debug(f"Generated filename: {filename}")
 
             # Save file using storage manager
-            logger.debug(f"Saving file to folder: {sanitized_folder}")
-            storage.save_file(sanitized_folder, filename, downloaded_file)
+            destination = io.BytesIO()
+            await file_obj.download_to_memory(destination)
+            storage.save_file(sanitized_folder, filename, destination.getvalue())
 
+            # Get updated file list
+            files = storage.list_files(sanitized_folder)
+            files_list = "\n".join([f"{i+1}. 📄 {f}" for i, f in enumerate(files)])
+
+            # Send confirmation message
             await update.message.reply_text(
-                "✅ File saved successfully!\n"
+                "✅ 𝗙𝗶𝗹𝗲 𝘀𝗮𝘃𝗲𝗱 𝘀𝘂𝗰𝗰𝗲𝘀𝘀𝗳𝘂𝗹𝗹𝘆!\n"
+                "════════════════\n\n"
                 f"📂 Folder: {folder_name}\n"
-                f"📄 Filename: {filename}\n"
+                f"📄 Filename: {filename}\n\n"
+                "📑 𝗙𝗼𝗹𝗱𝗲𝗿 𝗖𝗼𝗻𝘁𝗲𝗻𝘁𝘀:\n"
+                f"{files_list}\n\n"
+                f"📊 Total Files: {len(files)}\n"
                 "════════════════"
             )
-            logger.debug(f"File '{filename}' saved successfully to folder '{sanitized_folder}' by user: {user.username}")
 
         except Exception as e:
             logger.error(f"Error downloading/saving file: {str(e)}", exc_info=True)
@@ -819,7 +870,7 @@ async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT
         )
         return
 
-    # Check for folder numberif not context.args:
+    # Check for folder number
     if not context.args:
         logger.debug("No folder number provided")
         await update.message.reply_text(
@@ -899,13 +950,14 @@ async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT
 
             # Download file content
             logger.debug("Downloading file content")
-            downloaded_file = await file_obj.download_as_bytearray()
-            if not downloaded_file:
+            destination = io.BytesIO()
+            await file_obj.download_to_memory(destination)
+            if not destination.getvalue():
                 raise ValueError("Could not download file content")
 
             # Save file
             logger.debug(f"Saving file as: {custom_filename}")
-            storage.save_file(sanitized_folder, custom_filename, downloaded_file)
+            storage.save_file(sanitized_folder, custom_filename, destination.getvalue())
 
             # Get updated file list
             files = storage.list_files(sanitized_folder)
