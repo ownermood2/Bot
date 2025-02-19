@@ -30,7 +30,7 @@ def main():
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("get", get_file))
     application.add_handler(CommandHandler("mkdir", create_folder))
-    
+
     # Add file handler
     application.add_handler(MessageHandler(
         filters.ATTACHMENT | filters.Document.ALL | filters.PHOTO | filters.VIDEO,
@@ -44,7 +44,7 @@ def main():
     application.add_error_handler(handle_error)
 
     # Start the bot
-    application.run_polling(allowed_updates=Application.ALL_UPDATES)
+    application.run_polling(allowed_updates=None)
 
 if __name__ == '__main__':
     main()
