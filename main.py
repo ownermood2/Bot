@@ -4,7 +4,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 from bot_handlers import (
     start, help_command, handle_file, get_file, create_folder,
     remove_folder, remove_file, handle_unknown_command, handle_error,
-    button_callback, handle_command_with_file
+    button_callback, handle_command_with_file, list_files
 )
 
 # Enable logging
@@ -30,6 +30,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("get", get_file))
+    application.add_handler(CommandHandler("list", list_files))
     application.add_handler(CommandHandler("addfolder", create_folder))
     application.add_handler(CommandHandler("removefolder", remove_folder))  # Keep for backward compatibility
     application.add_handler(CommandHandler("kickfolder", remove_folder))    # New command name
