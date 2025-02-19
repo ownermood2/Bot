@@ -10,7 +10,7 @@ from bot_handlers import (
 # Enable logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.DEBUG  # Changed to DEBUG level for more detailed logs
 )
 
 logger = logging.getLogger(__name__)
