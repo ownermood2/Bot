@@ -166,7 +166,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "- /addfolder <folder_name>\n"
         "- /removefolder <folder_number>\n"
         "- /add <folder_number>\n"
-        "- /removefile <folder_number> <filename>\n\n"
+        "- /remove <folder_number> <filename>\n\n"
         "📁 𝗔𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗙𝗼𝗹𝗱𝗲𝗿𝘀 (𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝘃𝗶𝗲𝘄 𝗳𝗶𝗹𝗲𝘀):",
         reply_markup=keyboard
     )
@@ -181,18 +181,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         try:
             files = storage.list_files(folder_name)
             if files:
-                # Create a paginated list of files with numbers
+                # Create a numbered list of files with emoji
                 files_list = "\n".join([f"{i+1}. 📄 {file}" for i, file in enumerate(files)])
+                # Get folder number for the tip
+                folder_num = PREDEFINED_FOLDERS.index(folder_name) + 1
                 await query.message.reply_text(
-                    f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n{files_list}\n\n"
+                    f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
+                    f"{files_list}\n\n"
                     f"📊 Total Files: {len(files)}\n\n"
-                    f"💡 𝗧𝗶𝗽: Use /get {folder_name} <filename> to download a file\n"
+                    f"💡 𝗧𝗶𝗽: Use /get {folder_num} <filename> to download a file\n"
                     f"════════════════"
                 )
             else:
                 await query.message.reply_text(
                     f"📂 𝗙𝗼𝗹𝗱𝗲𝗿 '{folder_name}' 𝗶𝘀 𝗲𝗺𝗽𝘁𝘆\n\n"
-                    f"💡 𝗧𝗶𝗽: You can upload files to this folder by sending them with the folder name in caption\n"
+                    f"💡 𝗧𝗶𝗽: You can upload files to this folder by sending them with the folder number in caption\n"
                     f"════════════════"
                 )
         except Exception as e:
@@ -514,27 +517,144 @@ async def remove_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
 
 async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Show instructions for uploading files."""
-    logger.debug(f"Handling /add command from user: {update.effective_user.username}")
-    await update.message.reply_text(
-        "📤 𝗛𝗼𝘄 𝘁𝗼 𝘂𝗽𝗹𝗼𝗮𝗱 𝗮 𝗳𝗶𝗹𝗲:\n"
-        "════════════════\n\n"
-        "1️⃣ 𝗦𝗲𝗹𝗲𝗰𝘁 𝘆𝗼𝘂𝗿 𝗳𝗶𝗹𝗲:\n"
-        "   • Click 📎 (attachment)\n"
-        "   • Choose your PDF/photo/video\n\n"
-        "2️⃣ 𝗔𝗱𝗱 𝗳𝗼𝗹𝗱𝗲𝗿 𝗻𝘂𝗺𝗯𝗲𝗿:\n"
-        "   • Type ONLY the number (e.g., '3')\n"
-        "   • Add it in the caption field\n\n"
-        "3️⃣ 𝗦𝗲𝗻𝗱 𝘁𝗵𝗲 𝗺𝗲𝘀𝘀𝗮𝗴𝗲\n\n"
-        "💡 𝗘𝘅𝗮𝗺𝗽𝗹𝗲:\n"
-        "• Select your file\n"
-        "• Type '3' in caption to save in folder 3\n"
-        "• Send\n\n"
-        "🔍 Use /help to see all folder numbers\n"
-        "════════════════"
-    )
-    logger.debug("Upload instructions sent successfully")
+    """Handle /add command with file upload."""
+    user = update.effective_user
+    logger.debug(f"Handling /add command from user: {user.username}")
 
+    if not is_developer(user.username):
+        await unauthorized_message(update)
+        return
+
+    # Check if a reply to a file message exists
+    if not update.message.reply_to_message or (
+        not update.message.reply_to_message.document and
+        not update.message.reply_to_message.photo and
+        not update.message.reply_to_message.video
+    ):
+        await update.message.reply_text(
+            "📤 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗮𝗱𝗱 𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
+            "════════════════\n\n"
+            "1️⃣ 𝗥𝗲𝗽𝗹𝘆 𝘁𝗼 𝗮 𝗳𝗶𝗹𝗲 𝘄𝗶𝘁𝗵:\n"
+            "/add <folder_number> [custom_filename]\n\n"
+            "📌 𝗘𝘅𝗮𝗺𝗽𝗹𝗲𝘀:\n"
+            "• /add 3 → Uses original filename\n"
+            "• /add 3 my_notes.pdf → Uses custom name\n\n"
+            "💡 𝗧𝗶𝗽𝘀:\n"
+            "• PDF files keep original name if no custom name\n"
+            "• Photos/videos need custom names\n"
+            "════════════════"
+        )
+        return
+
+    # Check for folder number
+    if not context.args:
+        await update.message.reply_text(
+            "❌ 𝗠𝗶𝘀𝘀𝗶𝗻𝗴 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
+            "════════════════\n\n"
+            "💡 Use: /add <folder_number> [custom_filename]\n"
+            "🔍 Example: /add 3 my_notes.pdf\n"
+            "════════════════"
+        )
+        return
+
+    try:
+        # Get folder number and validate
+        folder_num = int(context.args[0]) - 1  # Convert to 0-based index
+        logger.debug(f"Received folder number: {folder_num + 1}")
+
+        if folder_num < 0 or folder_num >= len(PREDEFINED_FOLDERS):
+            await update.message.reply_text(
+                "❌ 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
+                "════════════════\n\n"
+                "💡 Please use a number between 1 and 18\n"
+                "🔍 Use /help to see available folders\n"
+                "════════════════"
+            )
+            return
+
+        # Get folder name and sanitize it
+        folder_name = PREDEFINED_FOLDERS[folder_num]
+        sanitized_folder = sanitize_folder_name(folder_name)
+        logger.debug(f"Using folder: {folder_name} (sanitized: {sanitized_folder})")
+
+        # Get the file
+        file = None
+        custom_filename = None
+        original_filename = None
+        file_extension = None
+
+        if update.message.reply_to_message.document:
+            file = update.message.reply_to_message.document
+            original_filename = file.file_name
+            file_extension = os.path.splitext(original_filename)[1].lower()
+        elif update.message.reply_to_message.photo:
+            file = update.message.reply_to_message.photo[-1]
+            file_extension = '.jpg'
+        else:  # video
+            file = update.message.reply_to_message.video
+            file_extension = '.mp4'
+
+        # Get custom filename if provided
+        if len(context.args) > 1:
+            custom_filename = " ".join(context.args[1:])
+            if not any(custom_filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS):
+                custom_filename += file_extension
+        elif file_extension == '.pdf' and original_filename:
+            # For PDFs, use original name if no custom name provided
+            custom_filename = original_filename
+        else:
+            # For other files, require a custom name
+            await update.message.reply_text(
+                "❌ 𝗠𝗶𝘀𝘀𝗶𝗻𝗴 𝗙𝗶𝗹𝗲𝗻𝗮𝗺𝗲\n"
+                "════════════════\n\n"
+                "💡 Non-PDF files require a custom filename\n"
+                "🔍 Example: /add 3 my_image.jpg\n"
+                "════════════════"
+            )
+            return
+
+        # Save file and generate summary
+        try:
+            file_obj = await context.bot.get_file(file.file_id)
+            downloaded_file = await file_obj.download_as_bytearray()
+            storage.save_file(sanitized_folder, custom_filename, downloaded_file)
+
+            # Get total files in folder for summary
+            files = storage.list_files(sanitized_folder)
+            files_list = "\n".join([f"{i+1}. 📄 {file}" for i, file in enumerate(files)])
+
+            # Send summary with exact formatting
+            await update.message.reply_text(
+                f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
+                f"{files_list}\n\n"
+                f"📊 Total Files: {len(files)}\n\n"
+                f"💡 𝗧𝗶𝗽: Use /get {folder_num + 1} <filename> to download a file\n"
+                f"════════════════"
+            )
+            logger.debug(f"File '{custom_filename}' saved successfully to folder '{sanitized_folder}' by user: {user.username}")
+
+        except Exception as e:
+            logger.error(f"Error saving file: {str(e)}", exc_info=True)
+            await update.message.reply_text(
+                f"❌ Error saving file: {str(e)}\n"
+                f"🔄 Please try again or contact @CV_Owner for support\n"
+                f"════════════════"
+            )
+
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Invalid folder number!\n"
+            "💡 Please provide a valid folder number\n"
+            "🔍 Use /help to see available folders\n"
+            "════════════════"
+        )
+    except Exception as e:
+        logger.error(f"Error in handle_command_with_file: {str(e)}", exc_info=True)
+        await update.message.reply_text(
+            f"❌ Error processing file: {str(e)}\n"
+            f"🔄 Please try again or contact @CV_Owner for support\n"
+            f"════════════════"
+        )
 
 async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle unknown commands."""
@@ -545,7 +665,6 @@ async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_T
 async def handle_error(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle errors."""
     logger.error(f"Update {update} caused error {context.error}", exc_info=True)
-
     error_message = "Sorry, something went wrong. Please try again later."
 
     try:
