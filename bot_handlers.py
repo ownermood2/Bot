@@ -170,40 +170,321 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         reply_markup=keyboard
     )
 
+async def get_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Enhanced get command with smart search and suggestions."""
+    if not context.args:
+        await update.message.reply_text(
+            "📝 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗴𝗲𝘁 𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
+            "════════════════\n\n"
+            "🔍 Search Options:\n"
+            "➜ /get <filename> - Search across all folders\n"
+            "➜ /get <folder_number> <filename> - Search in specific folder\n"
+            "➜ /get <folder_number> all - List all files in folder\n\n"
+            "📌 Examples:\n"
+            "• /get static - Find files named 'static'\n"
+            "• /get 3 notes - Find 'notes' in folder 3\n"
+            "• /get 1 all - List all files in folder 1\n"
+            "════════════════"
+        )
+        return
+
+    try:
+        # Check if first argument is a number (folder_number)
+        is_folder_search = context.args[0].isdigit()
+        page = 1  # Default page number
+
+        if is_folder_search:
+            folder_num = int(context.args[0]) - 1  # Convert to 0-based index
+            if folder_num < 0 or folder_num >= len(PREDEFINED_FOLDERS):
+                await update.message.reply_text(
+                    "❌ 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
+                    "════════════════\n\n"
+                    "💡 Please use a number between 1 and 18\n"
+                    "🔍 Use /help to see available folders\n"
+                    "════════════════"
+                )
+                return
+
+            folder_name = PREDEFINED_FOLDERS[folder_num]
+            sanitized_folder = sanitize_folder_name(folder_name)
+            query = " ".join(context.args[1:])  # Rest is the search query
+
+            if query.lower() == 'all':
+                # List all files in folder with pagination
+                try:
+                    search_results = storage.search_files(query="", folder_name=sanitized_folder, page=page)
+                    files = search_results['results']
+                    total_count = search_results['total_count']
+
+                    if not files:
+                        await update.message.reply_text(
+                            f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
+                            "No files found.\n"
+                            "════════════════"
+                        )
+                        return
+
+                    # Create files list with emojis
+                    files_list = "\n".join([f"{i+1}. 📄 {file}" for i, file in enumerate(files)])
+
+                    # Create keyboard for pagination
+                    keyboard = []
+                    if search_results['has_more']:
+                        keyboard.append([
+                            InlineKeyboardButton("📄 Load More", callback_data=f"more_{sanitized_folder}_{page+1}")
+                        ])
+                    keyboard.append([
+                        InlineKeyboardButton("🔄 Back", callback_data="back")
+                    ])
+
+                    await update.message.reply_text(
+                        f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
+                        f"{files_list}\n\n"
+                        f"📊 Results: {len(files)} of {total_count}\n"
+                        f"💡 𝗧𝗶𝗽: Use /get {folder_num + 1} <filename> to download\n"
+                        f"════════════════",
+                        reply_markup=InlineKeyboardMarkup(keyboard)
+                    )
+
+                except Exception as e:
+                    logger.error(f"Error listing files: {str(e)}", exc_info=True)
+                    await update.message.reply_text(
+                        "❌ 𝗘𝗿𝗿𝗼𝗿 𝗹𝗶𝘀𝘁𝗶𝗻𝗴 𝗳𝗶𝗹𝗲𝘀\n"
+                        "════════════════\n\n"
+                        f"💡 Error: {str(e)}\n"
+                        "🔄 Please try again or contact @CV_Owner\n"
+                        "════════════════"
+                    )
+            else:
+                # Search in specific folder
+                try:
+                    search_results = storage.search_files(query, sanitized_folder, page=page)
+                    exact_matches = search_results['results']
+                    similar_files = search_results['similar_files']
+                    total_count = search_results['total_count']
+
+                    if not exact_matches and not similar_files:
+                        await update.message.reply_text(
+                            "❌ 𝗡𝗼 𝗠𝗮𝘁𝗰𝗵𝗲𝘀 𝗙𝗼𝘂𝗻𝗱\n"
+                            "════════════════\n\n"
+                            f"💡 No files matching '{query}' found\n"
+                            "🔍 Try a different search term\n"
+                            "════════════════"
+                        )
+                        return
+
+                    # Format results message
+                    message_parts = [f"🔍 𝗦𝗲𝗮𝗿𝗰𝗵 𝗥𝗲𝘀𝘂𝗹𝘁𝘀 𝗳𝗼𝗿 '{query}':\n"]
+
+                    if exact_matches:
+                        message_parts.append("\n📂 𝗘𝘅𝗮𝗰𝘁 𝗠𝗮𝘁𝗰𝗵𝗲𝘀:")
+                        message_parts.extend([f"{i+1}. 📄 {file}" for i, file in enumerate(exact_matches)])
+
+                    if similar_files:
+                        message_parts.append("\n\n🔍 𝗦𝗶𝗺𝗶𝗹𝗮𝗿 𝗙𝗶𝗹𝗲𝘀:")
+                        message_parts.extend([f"• 📄 {file}" for file in similar_files])
+
+                    message_parts.append(f"\n\n📊 Results: {len(exact_matches)} of {total_count}")
+
+                    # Create keyboard for pagination and actions
+                    keyboard = []
+                    if search_results['has_more']:
+                        keyboard.append([
+                            InlineKeyboardButton("📄 Load More", callback_data=f"more_{sanitized_folder}_{page+1}_{query}")
+                        ])
+                    keyboard.append([
+                        InlineKeyboardButton("🔄 Back", callback_data="back")
+                    ])
+
+                    await update.message.reply_text(
+                        "\n".join(message_parts) + "\n════════════════",
+                        reply_markup=InlineKeyboardMarkup(keyboard)
+                    )
+
+                    # If there's exactly one match, send the file
+                    if len(exact_matches) == 1:
+                        file_path = storage.get_file_path(sanitized_folder, exact_matches[0])
+                        with open(file_path, 'rb') as f:
+                            await update.message.reply_document(
+                                document=f,
+                                filename=exact_matches[0]
+                            )
+
+                except Exception as e:
+                    logger.error(f"Error searching files: {str(e)}", exc_info=True)
+                    await update.message.reply_text(
+                        "❌ 𝗘𝗿𝗿𝗼𝗿 𝗦𝗲𝗮𝗿𝗰𝗵𝗶𝗻𝗴 𝗙𝗶𝗹𝗲𝘀\n"
+                        "════════════════\n\n"
+                        f"💡 Error: {str(e)}\n"
+                        "🔄 Please try again or contact @CV_Owner\n"
+                        "════════════════"
+                    )
+
+        else:
+            # Global search across all folders
+            query = " ".join(context.args)
+            try:
+                search_results = storage.search_files(query, page=page)
+                exact_matches = search_results['results']
+                similar_files = search_results['similar_files']
+                total_count = search_results['total_count']
+
+                if not exact_matches and not similar_files:
+                    await update.message.reply_text(
+                        "❌ 𝗡𝗼 𝗠𝗮𝘁𝗰𝗵𝗲𝘀 𝗙𝗼𝘂𝗻𝗱\n"
+                        "════════════════\n\n"
+                        f"💡 No files matching '{query}' found\n"
+                        "🔍 Try a different search term\n"
+                        "════════════════"
+                    )
+                    return
+
+                # Format results message
+                message_parts = [f"🔍 𝗚𝗹𝗼𝗯𝗮𝗹 𝗦𝗲𝗮𝗿𝗰𝗵 𝗥𝗲𝘀𝘂𝗹𝘁𝘀 𝗳𝗼𝗿 '{query}':\n"]
+
+                if exact_matches:
+                    message_parts.append("\n📂 𝗘𝘅𝗮𝗰𝘁 𝗠𝗮𝘁𝗰𝗵𝗲𝘀:")
+                    message_parts.extend([f"{i+1}. 📄 {file[1]} (Folder: {file[0]})"
+                                        for i, file in enumerate(exact_matches)])
+
+                if similar_files:
+                    message_parts.append("\n\n🔍 𝗦𝗶𝗺𝗶𝗹𝗮𝗿 𝗙𝗶𝗹𝗲𝘀:")
+                    message_parts.extend([f"• 📄 {file[1]} (Folder: {file[0]})"
+                                        for file in similar_files])
+
+                message_parts.append(f"\n\n📊 Results: {len(exact_matches)} of {total_count}")
+
+                # Create keyboard for pagination and actions
+                keyboard = []
+                if search_results['has_more']:
+                    keyboard.append([
+                        InlineKeyboardButton("📄 Load More", callback_data=f"more_global_{page+1}_{query}")
+                    ])
+                keyboard.append([
+                    InlineKeyboardButton("🔄 Back", callback_data="back")
+                ])
+
+                await update.message.reply_text(
+                    "\n".join(message_parts) + "\n════════════════",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+
+                # If there's exactly one match, send the file
+                if len(exact_matches) == 1:
+                    folder_name, filename = exact_matches[0]
+                    file_path = storage.get_file_path(folder_name, filename)
+                    with open(file_path, 'rb') as f:
+                        await update.message.reply_document(
+                            document=f,
+                            filename=filename
+                        )
+
+            except Exception as e:
+                logger.error(f"Error in global search: {str(e)}", exc_info=True)
+                await update.message.reply_text(
+                    "❌ 𝗘𝗿𝗿𝗼𝗿 𝗦𝗲𝗮𝗿𝗰𝗵𝗶𝗻𝗴 𝗙𝗶𝗹𝗲𝘀\n"
+                    "════════════════\n\n"
+                    f"💡 Error: {str(e)}\n"
+                    "🔄 Please try again or contact @CV_Owner\n"
+                    "════════════════"
+                )
+
+    except ValueError as e:
+        logger.error(f"Invalid input: {str(e)}", exc_info=True)
+        await update.message.reply_text(
+            "❌ 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗜𝗻𝗽𝘂𝘁\n"
+            "════════════════\n\n"
+            "💡 Please use a valid format:\n"
+            "➜ /get <filename>\n"
+            "➜ /get <folder_number> <filename>\n"
+            "🔍 Use /help to see all options\n"
+            "════════════════"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error in get_file: {str(e)}", exc_info=True)
+        await update.message.reply_text(
+            "❌ 𝗨𝗻𝗲𝘅𝗽𝗲𝗰𝘁𝗲𝗱 𝗘𝗿𝗿𝗼𝗿\n"
+            "════════════════\n\n"
+            f"💡 Error: {str(e)}\n"
+            "🔄 Please try again or contact @CV_Owner\n"
+            "════════════════"
+        )
+
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle button clicks."""
+    """Handle button clicks for pagination and navigation."""
     query = update.callback_query
     await query.answer()
 
-    if query.data.startswith("folder_"):
-        folder_name = query.data[7:]  # Remove 'folder_' prefix
-        try:
-            files = storage.list_files(folder_name)
-            if files:
-                # Create a numbered list of files with emoji
-                files_list = "\n".join([f"{i+1}. 📄 {file}" for i, file in enumerate(files)])
-                # Get folder number for the tip
-                folder_num = PREDEFINED_FOLDERS.index(folder_name) + 1
-                await query.message.reply_text(
-                    f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
-                    f"{files_list}\n\n"
-                    f"📊 Total Files: {len(files)}\n\n"
-                    f"💡 𝗧𝗶𝗽: Use /get {folder_num} <filename> to download a file\n"
-                    f"════════════════"
+    try:
+        if query.data == "back":
+            # Remove the inline keyboard
+            await query.message.edit_reply_markup(reply_markup=None)
+            return
+
+        if query.data.startswith("more_"):
+            # Handle pagination
+            parts = query.data.split('_')
+            if parts[1] == "global":
+                # Global search pagination
+                page = int(parts[2])
+                search_query = "_".join(parts[3:])
+                search_results = storage.search_files(search_query, page=page)
+            else:
+                # Folder-specific pagination
+                folder_name = parts[1]
+                page = int(parts[2])
+                search_query = "_".join(parts[3:]) if len(parts) > 3 else ""
+                search_results = storage.search_files(search_query, folder_name=folder_name, page=page)
+
+            # Format results message similar to the original search
+            message_parts = []
+            if search_results['results']:
+                if isinstance(search_results['results'][0], tuple):
+                    # Global search results
+                    message_parts.extend([f"{i+1}. 📄 {file[1]} (Folder: {file[0]})"
+                                        for i, file in enumerate(search_results['results'])])
+                else:
+                    # Folder-specific results
+                    message_parts.extend([f"{i+1}. 📄 {file}"
+                                        for i, file in enumerate(search_results['results'])])
+
+            # Update keyboard
+            keyboard = []
+            if search_results['has_more']:
+                next_page = page + 1
+                callback_data = f"more_{parts[1]}_{next_page}"
+                if search_query:
+                    callback_data += f"_{search_query}"
+                keyboard.append([
+                    InlineKeyboardButton("📄 Load More", callback_data=callback_data)
+                ])
+            keyboard.append([
+                InlineKeyboardButton("🔄 Back", callback_data="back")
+            ])
+
+            # Update message with new results
+            if message_parts:
+                await query.message.edit_text(
+                    "\n".join(message_parts) + f"\n\n📊 Page {page}\n════════════════",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
                 )
             else:
-                await query.message.reply_text(
-                    f"📂 𝗙𝗼𝗹𝗱𝗲𝗿 '{folder_name}' 𝗶𝘀 𝗲𝗺𝗽𝘁𝘆\n\n"
-                    f"💡 𝗧𝗶𝗽: You can upload files to this folder by sending them with the folder number in caption\n"
-                    f"════════════════"
+                await query.message.edit_text(
+                    "No more results to show.\n════════════════",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("🔄 Back", callback_data="back")
+                    ]])
                 )
-        except Exception as e:
-            logger.error(f"Error accessing folder '{folder_name}': {str(e)}", exc_info=True)
-            await query.message.reply_text(
-                f"❌ 𝗘𝗿𝗿𝗼𝗿: Could not access folder '{folder_name}'\n"
-                f"💡 Please try again or contact support if the issue persists.\n"
-                f"════════════════"
-            )
+
+    except Exception as e:
+        logger.error(f"Error in button callback: {str(e)}", exc_info=True)
+        await query.message.edit_text(
+            "❌ 𝗘𝗿𝗿𝗼𝗿 𝗣𝗿𝗼𝗰𝗲𝘀𝘀𝗶𝗻𝗴 𝗥𝗲𝗾𝘂𝗲𝘀𝘁\n"
+            "════════════════\n\n"
+            f"💡 Error: {str(e)}\n"
+            "🔄 Please try again or contact @CV_Owner\n"
+            "════════════════"
+        )
 
 async def create_folder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Create a new folder."""
@@ -386,85 +667,6 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"════════════════"
         )
 
-async def get_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Get a file or list files in a folder."""
-    if len(context.args) < 2:
-        await update.message.reply_text(
-            "📝 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗴𝗲𝘁 𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
-            "════════════════\n\n"
-            "💡 Use: /get <folder_number> <filename/all>\n"
-            "📌 Example: /get 3 document.pdf\n\n"
-            "🔍 Use /help to see folder numbers\n"
-            "════════════════"
-        )
-        return
-
-    try:
-        # Get folder number and validate
-        folder_num = int(context.args[0]) - 1  # Convert to 0-based index
-        if folder_num < 0 or folder_num >= len(PREDEFINED_FOLDERS):
-            await update.message.reply_text(
-                "❌ 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
-                "════════════════\n\n"
-                "💡 Please use a number between 1 and 18\n"
-                "🔍 Use /help to see available folders\n"
-                "════════════════"
-            )
-            return
-
-        # Get folder name and sanitize it
-        folder_name = PREDEFINED_FOLDERS[folder_num]
-        sanitized_folder = sanitize_folder_name(folder_name)
-        file_name = " ".join(context.args[1:])  # Join all remaining arguments as filename
-
-        if file_name.lower() == 'all':
-            # List all files in the folder
-            files = storage.list_files(sanitized_folder)
-            if not files:
-                await update.message.reply_text(
-                    f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
-                    "No files found.\n\n"
-                    "════════════════"
-                )
-                return
-
-            files_list = "\n".join([f"{i+1}. 📄 {file}" for i, file in enumerate(files)])
-            await update.message.reply_text(
-                f"📂 𝗙𝗶𝗹𝗲𝘀 𝗶𝗻 '{folder_name}':\n\n"
-                f"{files_list}\n\n"
-                f"📊 Total Files: {len(files)}\n\n"
-                f"💡 𝗧𝗶𝗽: Use /get {folder_num + 1} <filename> to download a file\n"
-                f"════════════════"
-            )
-        else:
-            # Get specific file
-            try:
-                file_path = storage.get_file_path(sanitized_folder, file_name)
-                with open(file_path, 'rb') as f:
-                    await update.message.reply_document(document=f)
-            except Exception as e:
-                logger.error(f"Error retrieving file: {str(e)}", exc_info=True)
-                await update.message.reply_text(
-                    f"❌ Error retrieving file: {str(e)}\n"
-                    f"🔄 Please try again or contact @CV_Owner for support\n"
-                    f"════════════════"
-                )
-
-    except ValueError:
-        await update.message.reply_text(
-            "❌ Invalid folder number!\n"
-            "💡 Please provide a valid folder number\n"
-            "🔍 Use /help to see available folders\n"
-            "════════════════"
-        )
-    except Exception as e:
-        logger.error(f"Error in get_file: {str(e)}", exc_info=True)
-        await update.message.reply_text(
-            f"❌ Error processing request: {str(e)}\n"
-            f"🔄 Please try again or contact @CV_Owner for support\n"
-            f"════════════════"
-        )
-
 async def remove_folder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove a folder and its contents (kickfolder command)."""
     user = update.effective_user
@@ -476,7 +678,7 @@ async def remove_folder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     if not context.args:
         await update.message.reply_text(
-            "📝 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗸𝗶𝗰𝗸𝗳𝗼𝗹𝗱𝗲𝗿 𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
+            "📝 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗸𝗶𝗰𝗸𝗳𝗼𝗹𝗱𝗲𝗿𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
             "════════════════\n\n"
             "💡 Use: /kickfolder <folder_number>\n"
             "📌 Example: /kickfolder 3\n\n"
@@ -617,7 +819,7 @@ async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT
         )
         return
 
-    # Check for folder number
+    # Check for folder numberif not context.args:
     if not context.args:
         logger.debug("No folder number provided")
         await update.message.reply_text(
