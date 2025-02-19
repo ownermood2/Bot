@@ -112,21 +112,19 @@ async def unauthorized_message(update: Update) -> None:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
-    user = update.effective_user
-    await update.message.reply_html(
-        f"🤖 𝗪𝗲𝗹𝗰𝗼𝗺𝗲 𝘁𝗼 𝗖𝗟𝗔𝗧 𝗖𝗹𝗼𝘂𝗱 𝗕𝗼𝘁!\n\n"
-        f"📚 𝗪𝗵𝗮𝘁 𝗧𝗵𝗶𝘀 𝗕𝗼𝘁 𝗖𝗮𝗻 𝗗𝗼:\n"
-        f"➜ ꜱᴛᴏʀᴇ & ᴍᴀɴᴀɢᴇ ᴘᴅꜰꜱ, ᴠɪᴅᴇᴏꜱ, ᴀɴᴅ ɪᴍᴀɢᴇꜱ\n"
-        f"➜ ɪɴꜱᴛᴀɴᴛ ꜱᴇᴀʀᴄʜ & ǫᴜɪᴄᴋ ꜰɪʟᴇ ʀᴇᴛʀɪᴇᴠᴀʟ\n"
-        f"➜ ᴏʀɢᴀɴɪᴢᴇᴅ ꜱᴜʙᴊᴇᴄᴛ-ᴡɪꜱᴇ ꜰᴏʟᴅᴇʀꜱ ꜰᴏʀ ᴇᴀꜱʏ ᴀᴄᴄᴇꜱꜱ\n"
-        f"➜ ꜰᴀꜱᴛ ꜱʜᴀʀɪɴɢ & ᴀɪ-ᴘᴏᴡᴇʀᴇᴅ ꜰɪʟᴇ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ\n"
-        f"➜ ᴄᴏᴠᴇʀꜱ ᴄʟᴀᴛ | ᴍᴀʜᴄᴇᴛ | ᴄᴜᴇᴛ & ᴀʟʟ ʟᴀᴡ ᴇxᴀᴍꜱ\n\n"
-        f"💡 𝗧𝗶𝗽: 𝗛𝗼𝘄 𝘁𝗼 𝗨𝘀𝗲\n"
-        f"➜ 𝗨𝗦𝗘 /get <ꜰᴏʟᴅᴇʀ_ɴᴜᴍʙᴇʀ> <ꜰɪʟᴇɴᴀᴍᴇ> ᴛᴏ ꜰᴇᴛᴄʜ ꜰɪʟᴇꜱ\n"
-        f"𝗘𝘅𝗮𝗺𝗽𝗹𝗲: /get 2 ᴄᴏɴꜱᴛɪᴛᴜᴛɪᴏɴ\n"
-        f"➜ 𝗘𝘅𝗽𝗹𝗼𝗿𝗲 /help ᴛᴏ ᴠɪᴇᴡ ᴀʟʟ ꜰᴏʟᴅᴇʀꜱ & ᴄᴏᴍᴍᴀɴᴅꜱ\n"
-        f"➜ 𝗤𝘂𝗶𝗰𝗸 𝗙𝗲𝘁𝗰𝗵 /get 1 filename ᴛᴏ ᴅᴏᴡɴʟᴏᴀᴅ ꜰʀᴏᴍ ꜰᴏʟᴅᴇʀ 𝟷\n\n"
-        f"🔹 ꜰᴏʀ ᴍᴏʀᴇ ᴅᴇᴛᴀɪʟꜱ, ᴛʏᴘᴇ /help 🚀"
+    await update.message.reply_text(
+        "🤖 𝗪𝗲𝗹𝗰𝗼𝗺𝗲 𝘁𝗼 𝗖𝗟𝗔𝗧 𝗖𝗹𝗼𝘂𝗱 𝗕𝗼𝘁!\n\n"
+        "📚 𝗪𝗵𝗮𝘁 𝗧𝗵𝗶𝘀 𝗕𝗼𝘁 𝗖𝗮𝗻 𝗗𝗼:\n"
+        "➜ ꜱᴛᴏʀᴇ & ᴍᴀɴᴀɢᴇ ᴘᴅꜰꜱ, ᴠɪᴅᴇᴏꜱ, ᴀɴᴅ ɪᴍᴀɢᴇꜱ\n"
+        "➜ ɪɴꜱᴛᴀɴᴛ ꜱᴇᴀʀᴄʜ & ǫᴜɪᴄᴋ ꜰɪʟᴇ ʀᴇᴛʀɪᴇᴠᴀʟ\n"
+        "➜ ᴏʀɢᴀɴɪᴢᴇᴅ ꜱᴜʙᴊᴇᴄᴛ-ᴡɪꜱᴇ ꜰᴏʟᴅᴇʀꜱ ꜰᴏʀ ᴇᴀꜱʏ ᴀᴄᴄᴇꜱꜱ\n"
+        "➜ ꜰᴀꜱᴛ ꜱʜᴀʀɪɴɢ & ᴀɪ-ᴘᴏᴡᴇʀᴇᴅ ꜰɪʟᴇ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ\n"
+        "➜ ᴄᴏᴠᴇʀꜱ ᴄʟᴀᴛ | ᴍᴀʜᴄᴇᴛ | ᴄᴜᴇᴛ & ᴀʟʟ ʟᴀᴡ ᴇxᴀᴍꜱ\n\n"
+        "💡 𝗧𝗶𝗽: 𝗛𝗼𝘄 𝘁𝗼 𝗨𝘀𝗲\n"
+        "➜ 𝗨𝗦𝗘 /get <folder_number> <filename> ᴛᴏ ꜰᴇᴛᴄʜ ꜰɪʟᴇꜱ\n"
+        "𝗘𝘅𝗮𝗺𝗽𝗹𝗲: /get 2 ᴄᴏɴꜱᴛɪᴛᴜᴛɪᴏɴ\n"
+        "➜ 𝗘𝘅𝗽𝗹𝗼𝗿𝗲 /help ᴛᴏ ᴠɪᴇᴡ ᴀʟʟ ꜰᴏʟᴅᴇʀꜱ & ᴄᴏᴍᴍᴀɴᴅꜱ\n\n"
+        "𝗙𝗼𝗿 𝗺𝗼𝗿𝗲 𝗱𝗲𝘁𝗮𝗶𝗹𝘀 ,𝗧𝘆𝗽𝗲 /help 🚀"
     )
 
 async def get_folder_keyboard():
@@ -151,21 +149,24 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """Send a message when the command /help is issued."""
     keyboard = await get_folder_keyboard()
     await update.message.reply_text(
-        "📂 𝗙𝗶𝗹𝗲 𝗠𝗮𝗻𝗮𝗴𝗲𝗺𝗲𝗻𝘁 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀\n"
-        "════════════════\n\n"
-        "📤 𝗧𝗼 𝘂𝗽𝗹𝗼𝗮𝗱 𝗳𝗶𝗹𝗲𝘀:\n"
-        "1. Select your file (📎)\n"
-        "2. Add folder number in caption (e.g., '3')\n"
-        "3. Send the message\n\n"
-        "📥 𝗧𝗼 𝗱𝗼𝘄𝗻𝗹𝗼𝗮𝗱 𝗳𝗶𝗹𝗲𝘀:\n"
-        "- /get <folder_number> <filename>\n"
-        "- /get <folder_number> all – List files\n\n"
+        "📂 𝗙𝗶𝗹𝗲 𝗠𝗮𝗻𝗮𝗴𝗲𝗺𝗲𝗻𝘁\n"
+        "════════════════\n"
+        "📥 𝗤𝘂𝗶𝗰𝗸 𝗙𝗲𝘁𝗰𝗵:\n"
+        "➜ /get <ꜰᴏʟᴅᴇʀ_ɴᴜᴍʙᴇʀ> <ꜰɪʟᴇɴᴀᴍᴇ> – Fetch file\n"
+        "➜ /get <ꜰᴏʟᴅᴇʀ_ɴᴜᴍʙᴇʀ> ᴀʟʟ – List files\n"
+        "➜ /get <folder_number> <query> – Find file\n"
+        "➜ /get <query> – Search across folders\n"
+        "➜ /list <folder_number> – View folder files\n"
+        "════════════════\n"
         "🛠 𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀:\n"
-        "- /addfolder <folder_name>\n"
-        "- /removefolder <folder_number>\n"
-        "- /add <folder_number>\n"
-        "- /removefile <folder_number> <filename>\n\n"
-        "📁 𝗔𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗙𝗼𝗹𝗱𝗲𝗿𝘀 (𝗖𝗹𝗶𝗰𝗸 𝘁𝗼 𝘃𝗶𝗲𝘄 𝗳𝗶𝗹𝗲𝘀):",
+        "➜ /addfolder <folder_name> – Create a folder\n"
+        "➜ /kickfolder <folder_number> – Delete a folder\n"
+        "➜ /add <folder_number> – Add files to a folder\n"
+        "➜ /kick <folder_number> <filename> – Delete a file\n"
+        "➜ /share <filename> [telegram I'd] – Grant access\n"
+        "➜ /lock <folder_number> – Restrict access\n"
+        "════════════════\n"
+        "📁 𝗩𝗶𝗲𝘄 𝗔𝘃𝗮𝗶𝗹𝗮𝗯𝗹𝗲 𝗙𝗼𝗹𝗱𝗲𝗿𝘀:",
         reply_markup=keyboard
     )
 
@@ -465,7 +466,7 @@ async def get_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 async def remove_folder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Remove a folder and its contents."""
+    """Remove a folder and its contents (kickfolder command)."""
     user = update.effective_user
     logger.debug(f"Remove folder attempt by user: {user.username}")
 
@@ -474,7 +475,14 @@ async def remove_folder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     if not context.args:
-        await update.message.reply_text("Please specify a folder name: /removefolder <folder_name>")
+        await update.message.reply_text(
+            "📝 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗸𝗶𝗰𝗸𝗳𝗼𝗹𝗱𝗲𝗿 𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
+            "════════════════\n\n"
+            "💡 Use: /kickfolder <folder_number>\n"
+            "📌 Example: /kickfolder 3\n\n"
+            "🔍 Use /help to see folder numbers\n"
+            "════════════════"
+        )
         return
 
     folder_name = sanitize_folder_name(context.args[0])
@@ -491,7 +499,7 @@ async def remove_folder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text(f"Error deleting folder: {str(e)}")
 
 async def remove_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Remove a specific file from a folder."""
+    """Remove a specific file from a folder (kick command)."""
     user = update.effective_user
     logger.debug(f"Remove file attempt by user: {user.username}")
 
@@ -501,10 +509,10 @@ async def remove_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if len(context.args) < 2:
         await update.message.reply_text(
-            "📝 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗿𝗲𝗺𝗼𝘃𝗲𝗳𝗶𝗹𝗲 𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
+            "📝 𝗛𝗼𝘄 𝘁𝗼 𝘂𝘀𝗲 /𝗸𝗶𝗰𝗸 𝗰𝗼𝗺𝗺𝗮𝗻𝗱:\n"
             "════════════════\n\n"
-            "💡 Use: /removefile <folder_number> <filename>\n"
-            "📌 Example: /removefile 3 document.pdf\n\n"
+            "💡 Use: /kick <folder_number> <filename>\n"
+            "📌 Example: /kick 3 document.pdf\n\n"
             "🔍 Use /help to see folder numbers\n"
             "════════════════"
         )
@@ -659,14 +667,14 @@ async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT
                 "❌ 𝗠𝗶𝘀𝘀𝗶𝗻𝗴 𝗙𝗶𝗹𝗲𝗻𝗮𝗺𝗲\n"
                 "════════════════\n\n"
                 "💡 Files without names require a custom filename\n"
-                "🔍 Example: /add 3 my_image.jpg\n"
+                "📄 Example: /add 3 my_image.jpg\n"
                 "════════════════"
             )
             return
 
         # Save file and generate summary
         try:
-            file_obj = await context.bot.get_file(file.file_id)
+            file_obj = await context.bot.getfile(file.file_id)
             downloaded_file = await file_obj.download_as_bytearray()
             storage.save_file(sanitized_folder, custom_filename, downloaded_file)
 

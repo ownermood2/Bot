@@ -31,9 +31,11 @@ def main():
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("get", get_file))
     application.add_handler(CommandHandler("addfolder", create_folder))
-    application.add_handler(CommandHandler("removefolder", remove_folder))
+    application.add_handler(CommandHandler("removefolder", remove_folder))  # Keep for backward compatibility
+    application.add_handler(CommandHandler("kickfolder", remove_folder))    # New command name
     application.add_handler(CommandHandler("add", handle_command_with_file))
-    application.add_handler(CommandHandler("removefile", remove_file))
+    application.add_handler(CommandHandler("removefile", remove_file))      # Keep for backward compatibility
+    application.add_handler(CommandHandler("kick", remove_file))            # New command name
 
     # Add callback query handler for inline buttons
     application.add_handler(CallbackQueryHandler(button_callback))
