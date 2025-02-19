@@ -1,9 +1,10 @@
 import logging
 import os
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 from bot_handlers import (
     start, help_command, handle_file, get_file, create_folder,
-    handle_unknown_command, handle_error
+    remove_folder, remove_file, handle_unknown_command, handle_error,
+    button_callback
 )
 
 # Enable logging
@@ -29,7 +30,12 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("get", get_file))
-    application.add_handler(CommandHandler("mkdir", create_folder))
+    application.add_handler(CommandHandler("addfolder", create_folder))
+    application.add_handler(CommandHandler("removefolder", remove_folder))
+    application.add_handler(CommandHandler("removepdf", remove_file))
+
+    # Add callback query handler for inline buttons
+    application.add_handler(CallbackQueryHandler(button_callback))
 
     # Add file handler
     application.add_handler(MessageHandler(
