@@ -26,27 +26,27 @@ def main():
     # Create the Application and pass it your bot's token
     application = Application.builder().token(token).build()
 
-    # Add command handlers
+    # Add command handlers first to ensure they take precedence
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("get", get_file))
     application.add_handler(CommandHandler("addfolder", create_folder))
     application.add_handler(CommandHandler("removefolder", remove_folder))
     application.add_handler(CommandHandler("removefile", remove_file))
-
-    # Add handler for add command that provides instructions
-    application.add_handler(CommandHandler("add", lambda update, context: handle_command_with_file(update, context, "add")))
+    application.add_handler(CommandHandler("add", handle_command_with_file))
 
     # Add callback query handler for inline buttons
     application.add_handler(CallbackQueryHandler(button_callback))
 
-    # Add file handler
-    application.add_handler(MessageHandler(
-        filters.ATTACHMENT | filters.Document.ALL | filters.PHOTO | filters.VIDEO,
-        handle_file
-    ))
+    # Add file handler - only for messages containing files, not commands
+    file_filter = (
+        (filters.ATTACHMENT | filters.Document.ALL | filters.PHOTO | filters.VIDEO) 
+        & ~filters.COMMAND  # Explicitly exclude any messages starting with /
+        & filters.CaptionRegex(r'^\d+$')  # Only match captions that are just numbers
+    )
+    application.add_handler(MessageHandler(file_filter, handle_file))
 
-    # Handle unknown commands
+    # Handle unknown commands - this should be last in command handling
     application.add_handler(MessageHandler(filters.COMMAND, handle_unknown_command))
 
     # Add error handler

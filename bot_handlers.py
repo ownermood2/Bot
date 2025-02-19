@@ -8,6 +8,42 @@ from config import ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 logger = logging.getLogger(__name__)
 storage = StorageManager()
 
+# Initialize storage and predefined folders
+PREDEFINED_FOLDERS = [
+    "GK-CA (1-Y) STATIC",
+    "GMB New (2025)",
+    "@CLAT_Vision Material",
+    "Case Laws & Judgments",
+    "CLAT Notification & Updates",
+    "English Language",
+    "Extra Resources",
+    "Group Study & Discussion Notes",
+    "Legal Maxims & Terms",
+    "Legal Reasoning",
+    "Logical Reasoning",
+    "Mock Tests",
+    "NLU Information",
+    "Notes & Summaries",
+    "Quants (Maths)",
+    "Syllabus & Strategy",
+    "Time Management & Study Planner",
+    "Video Lectures & PDFs"
+]
+
+def initialize_folders():
+    """Initialize all predefined folders."""
+    for folder in PREDEFINED_FOLDERS:
+        try:
+            sanitized_folder = sanitize_folder_name(folder)
+            if not os.path.exists(os.path.join(storage.base_path, sanitized_folder)):
+                storage.create_folder(sanitized_folder)
+                logger.debug(f"Created folder: {sanitized_folder}")
+        except Exception as e:
+            logger.error(f"Error creating folder {folder}: {str(e)}")
+
+# Initialize folders when module loads
+initialize_folders()
+
 # Developer usernames both with and without @ symbol
 DEVELOPER_USERNAMES = ['CV_Owner', '@CV_Owner', 'Ace_Clat', '@Ace_Clat']
 
@@ -68,36 +104,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def get_folder_keyboard():
     """Create an inline keyboard with folder buttons in a two-column grid."""
-    folders = [
-        "GK-CA (1-Y) STATIC",
-        "GMB New (2025)",
-        "@CLAT_Vision Material",
-        "Case Laws & Judgments",
-        "CLAT Notification & Updates",
-        "English Language",
-        "Extra Resources",
-        "Group Study & Discussion Notes",
-        "Legal Maxims & Terms",
-        "Legal Reasoning",
-        "Logical Reasoning",
-        "Mock Tests",
-        "NLU Information",
-        "Notes & Summaries",
-        "Quants (Maths)",
-        "Syllabus & Strategy",
-        "Time Management & Study Planner",
-        "Video Lectures & PDFs"
-    ]
-
     keyboard = []
     row = []
-    for i, folder in enumerate(folders):
+    for i, folder in enumerate(PREDEFINED_FOLDERS):
+        sanitized_name = sanitize_folder_name(folder)
         # Add number, folder emoji and arrow for better visibility
         button_text = f"{i+1}. 📁 {folder} →"
-        row.append(InlineKeyboardButton(button_text, callback_data=f"folder_{folder}"))
+        # Use sanitized name in callback data
+        row.append(InlineKeyboardButton(button_text, callback_data=f"folder_{sanitized_name}"))
 
         # Create rows with 2 buttons each
-        if len(row) == 2 or i == len(folders) - 1:
+        if len(row) == 2 or i == len(PREDEFINED_FOLDERS) - 1:
             keyboard.append(row)
             row = []
 
@@ -188,6 +205,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     user = update.effective_user
     logger.debug(f"File upload attempt by user: {user.username}")
 
+    # First check if it's a valid file message
     if not update.message.document and not update.message.photo and not update.message.video:
         await update.message.reply_text(
             "🚫 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗶𝗹𝗲 𝗧𝘆𝗽𝗲\n"
@@ -201,7 +219,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     # Check for folder number in caption
-    if not update.message.caption:
+    if not update.message.caption or not update.message.caption.strip().isdigit():
         await update.message.reply_text(
             "📝 𝗠𝗶𝘀𝘀𝗶𝗻𝗴 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
             "════════════════\n\n"
@@ -213,10 +231,10 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     try:
-        # Get folder number from caption
-        keyboard = await get_folder_keyboard()
+        # Get folder number and validate
         folder_num = int(update.message.caption.strip()) - 1  # Convert to 0-based index
-        if folder_num < 0 or folder_num >= len(keyboard.inline_keyboard):
+
+        if folder_num < 0 or folder_num >= len(PREDEFINED_FOLDERS):
             await update.message.reply_text(
                 "❌ 𝗜𝗻𝘃𝗮𝗹𝗶𝗱 𝗙𝗼𝗹𝗱𝗲𝗿 𝗡𝘂𝗺𝗯𝗲𝗿\n"
                 "════════════════\n\n"
@@ -226,31 +244,26 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
             return
 
-        # Get folder name from the keyboard buttons
-        folder_name = keyboard.inline_keyboard[folder_num][0].callback_data[7:]
-        folder_name = sanitize_folder_name(folder_name)
+        # Get folder name and sanitize it
+        folder_name = PREDEFINED_FOLDERS[folder_num]
+        sanitized_folder = sanitize_folder_name(folder_name)
+        logger.debug(f"Using sanitized folder name: {sanitized_folder}")
 
-        # Get the file from the message
+
+        # Get the file
         if update.message.document:
             file = update.message.document
             file_extension = os.path.splitext(file.file_name)[1].lower()
         elif update.message.photo:
             file = update.message.photo[-1]  # Get the highest quality photo
             file_extension = '.jpg'
-        elif update.message.video:
+        else:  # video
             file = update.message.video
             file_extension = '.mp4'
-        else:
-            await update.message.reply_text(
-                "❌ Unsupported file type!\n"
-                "💡 Please send a document, photo, or video\n"
-                "════════════════"
-            )
-            return
 
-        # Check file size
+        # Validate file size
         if hasattr(file, 'file_size') and file.file_size > MAX_FILE_SIZE:
-            size_mb = MAX_FILE_SIZE / (1024*1024)
+            size_mb = MAX_FILE_SIZE / (1024 * 1024)
             await update.message.reply_text(
                 f"❌ File too large!\n"
                 f"💡 Maximum size allowed: {size_mb:.1f}MB\n"
@@ -271,7 +284,7 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
             return
 
-        # Download and save the file
+        # Download and save file
         try:
             file_obj = await context.bot.get_file(file.file_id)
             if not file_obj:
@@ -281,17 +294,20 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             if not downloaded_file:
                 raise ValueError("Could not download file content")
 
-            # Save the file using storage manager
+            # Generate a unique filename using the file ID
             filename = f"{file.file_id}{file_extension}"
-            storage.save_file(folder_name, filename, downloaded_file)
+
+            # Save file using storage manager
+            storage.save_file(sanitized_folder, filename, downloaded_file)
 
             await update.message.reply_text(
                 f"✅ File saved successfully!\n"
-                f"📂 Folder: {folder_name}\n"
+                f"📂 Folder: {sanitized_folder}\n"
                 f"📄 Filename: {filename}\n"
                 f"════════════════"
             )
-            logger.debug(f"File '{filename}' saved successfully to folder '{folder_name}' by user: {user.username}")
+            logger.debug(f"File '{filename}' saved successfully to folder '{sanitized_folder}' by user: {user.username}")
+
         except Exception as e:
             logger.error(f"Error downloading/saving file: {str(e)}", exc_info=True)
             await update.message.reply_text(
@@ -445,8 +461,9 @@ async def remove_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"════════════════"
         )
 
-async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT_TYPE, command_name: str) -> None:
-    """Handle commands that expect a file attachment."""
+async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show instructions for uploading files."""
+    logger.debug(f"Handling /add command from user: {update.effective_user.username}")
     await update.message.reply_text(
         "📤 𝗛𝗼𝘄 𝘁𝗼 𝘂𝗽𝗹𝗼𝗮𝗱 𝗮 𝗳𝗶𝗹𝗲:\n"
         "════════════════\n\n"
@@ -464,6 +481,7 @@ async def handle_command_with_file(update: Update, context: ContextTypes.DEFAULT
         "🔍 Use /help to see all folder numbers\n"
         "════════════════"
     )
+    logger.debug("Upload instructions sent successfully")
 
 
 async def handle_unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
